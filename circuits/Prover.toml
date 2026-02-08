@@ -1,0 +1,14 @@
+# ShadowSwap Order Commitment - Prover Inputs
+# 
+# To generate a proof, run:
+#   nargo execute
+#   bb prove -b ./target/shadow_circuit.json -w ./target/shadow_circuit.gz -o ./target/proof
+
+# Private inputs (known only to the prover)
+amount = "100"
+price = "50000"
+salt = "12345"
+
+# Public input (the commitment hash that will be visible on-chain)
+# This is the Pedersen hash of (amount, price, salt)
+commitment_hash = "0x145bfd8e86824e23169655c9e16a6d6216add677a140cd3128c6f08ee2466c0f"

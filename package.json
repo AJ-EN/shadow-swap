@@ -1,0 +1,23 @@
+{
+  "name": "shadow_swap",
+  "version": "1.0.0",
+  "description": "A privacy-preserving Bitcoin Dark Pool on Starknet.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "bitcoinjs-lib": "^7.0.1",
+    "ecpair": "^3.0.0",
+    "tiny-secp256k1": "^2.2.4"
+  },
+  "devDependencies": {
+    "@types/node": "^25.2.2",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
+  }
+}

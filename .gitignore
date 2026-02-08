@@ -1,0 +1,28 @@
+# Node
+node_modules
+dist
+build
+
+# Next.js
+.next/
+out/
+
+# Environment Variables (NEVER COMMIT THESE)
+.env
+.env.local
+.env.*
+
+# Noir / Scarb / Cargo
+target/
+Cargo.lock
+Scarb.lock
+
+# Mac/System
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+
+# Bitcoin Wallet Files (Just in case)
+wallet.dat
