@@ -1,65 +1,37 @@
-# ShadowSwap
+# 🌑 ShadowSwap: Privacy-Preserving Atomic Swaps
 
-A privacy-preserving Bitcoin Dark Pool on Starknet.
+**ShadowSwap** is a non-custodial, privacy-first Dark Pool that enables Atomic Swaps between Bitcoin (L1) and Starknet (L2).
 
-## Overview
+Built for the **DoraHacks Re{define} Hackathon** (Privacy & Bitcoin Tracks).
 
-ShadowSwap enables private, trustless Bitcoin trading using zero-knowledge proofs. The system leverages:
+## 🏆 The Problem
+- **Bitcoin DeFi is risky:** Bridges like WBTC are centralized custody risks.
+- **DEXs trade transparency for privacy:** Your orders, amounts, and strategies are visible to MEV bots.
 
-- **Noir** for ZK circuit development
-- **Barretenberg** for proof generation
-- **Starknet (Cairo)** for on-chain settlement and order matching
-- **Bitcoin** for final asset settlement
+## 💡 The Solution
+ShadowSwap uses **Noir ZK Circuits** to hide order details (Amount, Price) and **HTLCs (Hash Time Locked Contracts)** to settle trades natively on Bitcoin.
+- **Zero Custody:** Funds never leave your wallet until the swap is atomic.
+- **Zero Knowledge:** The blockchain verifies the trade without knowing the amount.
 
-## Project Structure
+## 🏗 Architecture
+- **Starknet:** Acts as the coordination layer and verifies ZK proofs.
+- **Bitcoin:** Acts as the settlement layer (HTLC).
+- **Noir:** Generates proofs of "Solvency and Intent" without revealing values.
+- **Garaga:** Verifies Noir proofs efficiently on Starknet.
 
-```
-shadow_swap/
-├── circuits/       # Noir ZK circuits (Nargo project)
-├── contracts/      # Starknet smart contracts (Scarb/Cairo)
-├── client/         # Node.js/Next.js client for Bitcoin logic
-└── scripts/        # Utility scripts
-```
+## 🚀 Quick Start
 
-## Required Versions
+### Prerequisites
+- Node.js v18+
+- Scarb (Cairo Package Manager)
+- Nargo (Noir Toolchain) v1.0.0-beta.18
+- Bitcoin Core (or Mutinynet access)
 
-> ⚠️ **IMPORTANT**: Ensure you have the exact versions below to avoid compatibility issues.
-
-| Tool           | Version           | Installation                                      |
-|----------------|-------------------|---------------------------------------------------|
-| **Noir**       | `1.0.0-beta.18`   | `noirup -v 1.0.0-beta.18`                         |
-| **Barretenberg (bb)** | `0.67.0`   | `bbup -v 0.67.0`                                  |
-| **Scarb**      | Latest stable     | [Installation Guide](https://docs.swmansion.com/scarb/download) |
-| **Node.js**    | `>=18.0.0`        | [nodejs.org](https://nodejs.org)                  |
-
-## Quick Start
-
-### 1. Install Noir & Barretenberg
-
+### 1. Installation
 ```bash
-# Install noirup (Noir version manager)
-curl -L https://raw.githubusercontent.com/noir-lang/noirup/main/install | bash
-noirup -v 1.0.0-beta.18
+git clone [https://github.com/YOUR_USERNAME/shadow_swap.git](https://github.com/YOUR_USERNAME/shadow_swap.git)
+cd shadow_swap
 
-# Install bbup (Barretenberg version manager)
-curl -L https://raw.githubusercontent.com/AztecProtocol/aztec-packages/master/barretenberg/bbup/install | bash
-bbup -v 0.67.0
-```
-
-### 2. Build Circuits
-
-```bash
-cd circuits
-nargo build
-```
-
-### 3. Generate Proofs
-
-```bash
-cd circuits
-bb prove -b ./target/shadow_circuit.json -w ./target/shadow_circuit.gz -o ./target/proof
-```
-
-## License
-
-MIT
+# Install Dependencies
+npm install
+cd client && npm install
