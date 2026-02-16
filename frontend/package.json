@@ -9,9 +9,14 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@starknet-react/chains": "^5.0.3",
+    "@starknet-react/core": "^5.0.3",
+    "get-starknet-core": "^3.3.5",
     "next": "16.1.6",
     "react": "19.2.3",
-    "react-dom": "19.2.3"
+    "react-dom": "19.2.3",
+    "starknet": "^9.2.1",
+    "starknetkit": "^3.4.3"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

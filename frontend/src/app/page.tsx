@@ -1,6 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import { useAccount, useConnect, useDisconnect } from "@starknet-react/core";
+import { useCallback } from "react";
+
+// Contract addresses (deployed on Sepolia)
+const DARKPOOL_ADDRESS = process.env.NEXT_PUBLIC_DARKPOOL_ADDRESS || "0x0";
+const VERIFIER_ADDRESS = process.env.NEXT_PUBLIC_VERIFIER_ADDRESS || "0x0";
 
 // Types
 interface Order {
@@ -60,6 +66,22 @@ export default function Home() {
   const [isSwapping, setIsSwapping] = useState(false);
   const [demoStep, setDemoStep] = useState(0);
 
+  // Wallet hooks
+  const { address, isConnected, status: accountStatus } = useAccount();
+  const { connect, connectors } = useConnect();
+  const { disconnect } = useDisconnect();
+
+  const handleConnect = useCallback(() => {
+    // Connect with the first available connector
+    if (connectors.length > 0) {
+      connect({ connector: connectors[0] });
+    }
+  }, [connectors, connect]);
+
+  const truncatedAddress = address
+    ? `${address.slice(0, 6)}...${address.slice(-4)}`
+    : "";
+
   // Sample orders
   const orders: Order[] = [
     { id: "1", type: "sell", amount: 1.5, price: 48500, status: "active", createdAt: new Date() },
@@ -115,8 +137,8 @@ export default function Home() {
                 key={tab}
                 onClick={() => setActiveTab(tab as typeof activeTab)}
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-all capitalize ${activeTab === tab
-                    ? "bg-indigo-500/20 text-indigo-400 border border-indigo-500/30"
-                    : "text-gray-400 hover:text-white hover:bg-white/5"
+                  ? "bg-indigo-500/20 text-indigo-400 border border-indigo-500/30"
+                  : "text-gray-400 hover:text-white hover:bg-white/5"
                   }`}
               >
                 {tab}
@@ -127,9 +149,29 @@ export default function Home() {
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
               <div className="status-dot status-active" />
-              <span className="text-xs text-emerald-400">Testnet</span>
+              <span className="text-xs text-emerald-400">Sepolia</span>
             </div>
-            <button className="btn-secondary text-sm">Connect Wallet</button>
+            {isConnected ? (
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-indigo-500/10 border border-indigo-500/30">
+                  <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                  <span className="text-sm text-indigo-300 font-mono">{truncatedAddress}</span>
+                </div>
+                <button
+                  onClick={() => disconnect()}
+                  className="btn-secondary text-sm text-red-400 hover:text-red-300"
+                >
+                  Disconnect
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={handleConnect}
+                className="btn-secondary text-sm"
+              >
+                {accountStatus === 'connecting' ? 'Connecting...' : 'Connect Wallet'}
+              </button>
+            )}
           </div>
         </div>
       </header>
@@ -253,7 +295,7 @@ export default function Home() {
                       className={`flow-step ${step.status === "complete" ? "flow-step-complete" : ""}`}
                     >
                       <div className={`flow-step-icon ${step.status === "complete" ? "bg-indigo-500 border-indigo-500" :
-                          step.status === "active" ? "border-indigo-500 animate-pulse" : ""
+                        step.status === "active" ? "border-indigo-500 animate-pulse" : ""
                         }`}>
                         {step.status === "complete" && <CheckIcon />}
                         {step.status === "active" && <span className="w-2 h-2 rounded-full bg-indigo-500" />}
@@ -261,13 +303,13 @@ export default function Home() {
                       <div>
                         <div className="flex items-center gap-2">
                           <span className={`text-sm font-medium ${step.status === "complete" ? "text-indigo-400" :
-                              step.status === "active" ? "text-white" : "text-gray-500"
+                            step.status === "active" ? "text-white" : "text-gray-500"
                             }`}>
                             {step.title}
                           </span>
                           <span className={`text-xs px-2 py-0.5 rounded-full ${step.actor === "alice" ? "bg-pink-500/20 text-pink-400" :
-                              step.actor === "bob" ? "bg-blue-500/20 text-blue-400" :
-                                "bg-purple-500/20 text-purple-400"
+                            step.actor === "bob" ? "bg-blue-500/20 text-blue-400" :
+                              "bg-purple-500/20 text-purple-400"
                             }`}>
                             {step.actor === "alice" ? "👩 Alice" : step.actor === "bob" ? "👨 Bob" : "📜 Contract"}
                           </span>
@@ -322,7 +364,7 @@ export default function Home() {
                         <td className="py-4">
                           <div className="flex items-center gap-2">
                             <div className={`status-dot ${order.status === "active" ? "status-active" :
-                                order.status === "matched" ? "status-pending" : "status-inactive"
+                              order.status === "matched" ? "status-pending" : "status-inactive"
                               }`} />
                             <span className="text-sm capitalize">{order.status}</span>
                           </div>

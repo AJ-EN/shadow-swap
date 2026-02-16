@@ -2,13 +2,23 @@
 /// 
 /// A privacy-preserving dark pool for atomic swaps on Starknet.
 /// This contract manages orders and releases USDC when the correct secret is revealed.
+/// Orders require ZK proof verification via Garaga to prove commitment validity.
 ///
 /// Flow:
-/// 1. Seller creates an order by depositing USDC with a secret_hash
-/// 2. Buyer reveals the secret (off-chain) to claim Bitcoin
-/// 3. Seller calls claim_order with secret to claim USDC (emits SecretRevealed for Bob)
+/// 1. Seller creates an order by depositing USDC with a secret_hash + ZK proof
+/// 2. ZK proof is verified on-chain via Garaga verifier contract
+/// 3. Buyer reveals the secret (off-chain) to claim Bitcoin
+/// 4. Seller calls claim_order with secret to claim USDC (emits SecretRevealed for Bob)
 
 use starknet::ContractAddress;
+
+/// Interface for the Garaga-generated verifier contract
+#[starknet::interface]
+pub trait IUltraKeccakZKHonkVerifier<TContractState> {
+    fn verify_ultra_keccak_zk_honk_proof(
+        self: @TContractState, full_proof_with_hints: Span<felt252>,
+    ) -> Result<Span<u256>, felt252>;
+}
 
 /// Order struct representing a swap order in the dark pool
 #[derive(Drop, Copy, Serde, starknet::Store)]
@@ -19,6 +29,8 @@ pub struct Order {
     pub token: ContractAddress,
     /// SHA256 hash of the secret (commitment) - stored as u256
     pub secret_hash: u256,
+    /// ZK commitment hash (from verified Noir proof public inputs)
+    pub zk_commitment: u256,
     /// Seller's address (who created the order and will receive tokens)
     pub seller: ContractAddress,
     /// Buyer's address (who will claim Bitcoin off-chain)
@@ -46,13 +58,14 @@ pub trait IERC20<TContractState> {
 /// DarkPool contract interface
 #[starknet::interface]
 pub trait IDarkPool<TContractState> {
-    /// Create a new order by depositing tokens
+    /// Create a new order by depositing tokens with ZK proof verification
     fn create_order(
         ref self: TContractState,
         amount: u256,
         token_address: ContractAddress,
         secret_hash: u256,
         buyer: ContractAddress,
+        zk_proof: Span<felt252>,
     ) -> u64;
 
     /// Claim an order by revealing the secret (for Seller/Alice)
@@ -74,7 +87,7 @@ pub trait IDarkPool<TContractState> {
 
 #[starknet::contract]
 pub mod DarkPool {
-    use super::{Order, IERC20Dispatcher, IERC20DispatcherTrait};
+    use super::{Order, IERC20Dispatcher, IERC20DispatcherTrait, IUltraKeccakZKHonkVerifierDispatcher, IUltraKeccakZKHonkVerifierDispatcherTrait};
     use starknet::{ContractAddress, get_caller_address, get_contract_address, get_block_number};
     use starknet::storage::{Map, StorageMapReadAccess, StorageMapWriteAccess, StoragePointerReadAccess, StoragePointerWriteAccess};
     use core::sha256::compute_sha256_u32_array;
@@ -91,6 +104,8 @@ pub mod DarkPool {
         order_count: u64,
         /// Contract owner (for emergency functions)
         owner: ContractAddress,
+        /// Address of the Garaga ZK verifier contract
+        verifier_address: ContractAddress,
     }
 
     /// Events
@@ -100,6 +115,7 @@ pub mod DarkPool {
         OrderCreated: OrderCreated,
         SecretRevealed: SecretRevealed,
         OrderCancelled: OrderCancelled,
+        ProofVerified: ProofVerified,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -136,6 +152,15 @@ pub mod DarkPool {
         pub amount: u256,
     }
 
+    #[derive(Drop, starknet::Event)]
+    pub struct ProofVerified {
+        #[key]
+        pub order_id: u64,
+        #[key]
+        pub prover: ContractAddress,
+        pub zk_commitment: u256,
+    }
+
     /// Errors
     pub mod Errors {
         pub const ZERO_AMOUNT: felt252 = 'Amount must be greater than 0';
@@ -147,11 +172,15 @@ pub mod DarkPool {
         pub const NOT_SELLER: felt252 = 'Only seller can cancel';
         pub const TIMEOUT_NOT_REACHED: felt252 = 'Timeout not reached';
         pub const INVALID_BUYER: felt252 = 'Invalid buyer address';
+        pub const ZK_PROOF_FAILED: felt252 = 'ZK proof verification failed';
+        pub const INVALID_VERIFIER: felt252 = 'Invalid verifier address';
     }
 
     #[constructor]
-    fn constructor(ref self: ContractState, owner: ContractAddress) {
+    fn constructor(ref self: ContractState, owner: ContractAddress, verifier_address: ContractAddress) {
+        assert(verifier_address.is_non_zero(), Errors::INVALID_VERIFIER);
         self.owner.write(owner);
+        self.verifier_address.write(verifier_address);
         self.order_count.write(0);
     }
 
@@ -173,6 +202,7 @@ pub mod DarkPool {
             token_address: ContractAddress,
             secret_hash: u256,
             buyer: ContractAddress,
+            zk_proof: Span<felt252>,
         ) -> u64 {
             // Validate inputs
             assert(amount > 0, Errors::ZERO_AMOUNT);
@@ -183,17 +213,35 @@ pub mod DarkPool {
             let contract = get_contract_address();
             let block_number = get_block_number();
 
+            // Verify ZK proof via Garaga verifier contract
+            let verifier = IUltraKeccakZKHonkVerifierDispatcher {
+                contract_address: self.verifier_address.read()
+            };
+            let proof_result = verifier.verify_ultra_keccak_zk_honk_proof(zk_proof);
+            let public_inputs = match proof_result {
+                Result::Ok(inputs) => inputs,
+                Result::Err(_) => { panic!("{}", Errors::ZK_PROOF_FAILED); }
+            };
+
+            // Extract commitment hash from public inputs (first public input)
+            let zk_commitment = if public_inputs.len() > 0 {
+                *public_inputs.at(0)
+            } else {
+                0_u256
+            };
+
             // Transfer tokens from seller to contract
             let token = IERC20Dispatcher { contract_address: token_address };
             let success = token.transfer_from(caller, contract, amount);
             assert(success, Errors::TRANSFER_FAILED);
 
-            // Create new order
+            // Create new order with ZK commitment
             let order_id = self.order_count.read();
             let order = Order {
                 amount,
                 token: token_address,
                 secret_hash,
+                zk_commitment,
                 seller: caller,
                 buyer,
                 is_active: true,
@@ -204,7 +252,13 @@ pub mod DarkPool {
             self.orders.write(order_id, order);
             self.order_count.write(order_id + 1);
 
-            // Emit event
+            // Emit events
+            self.emit(ProofVerified {
+                order_id,
+                prover: caller,
+                zk_commitment,
+            });
+
             self.emit(OrderCreated {
                 order_id,
                 seller: caller,

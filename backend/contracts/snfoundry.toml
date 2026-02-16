@@ -1,0 +1,8 @@
+[sncast.sepolia]
+account = "shadowswap"
+url = "https://free-rpc.nethermind.io/sepolia-juno"
+accounts-file = "accounts.json"
+
+[sncast.default]
+account = "shadowswap"
+

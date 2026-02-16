@@ -42,6 +42,9 @@ fn test_valid_commitment() {
     // Compute the expected commitment hash
     let commitment = pedersen_hash([amount, price, salt]);
     
+    // Print the commitment so we can use it in Prover.toml
+    std::println(commitment);
+    
     // This should pass
     main(amount, price, salt, commitment);
 }
