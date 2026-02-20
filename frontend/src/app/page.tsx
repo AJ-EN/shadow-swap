@@ -44,32 +44,69 @@ const BitcoinIcon = () => (
 const USDCIcon = () => (
   <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
     <circle cx="12" cy="12" r="10" fill="#2775CA" />
-    <path d="M12 6v1.5m0 9V18m2.5-6.5a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" stroke="white" strokeWidth="1.5" fill="none" />
+    <path
+      d="M12 6v1.5m0 9V18m2.5-6.5a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"
+      stroke="white"
+      strokeWidth="1.5"
+      fill="none"
+    />
   </svg>
 );
 
 const LockIcon = () => (
-  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+  <svg
+    className="w-5 h-5"
+    fill="none"
+    viewBox="0 0 24 24"
+    stroke="currentColor"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+    />
   </svg>
 );
 
 const CheckIcon = () => (
-  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+  <svg
+    className="w-4 h-4"
+    fill="none"
+    viewBox="0 0 24 24"
+    stroke="currentColor"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={3}
+      d="M5 13l4 4L19 7"
+    />
   </svg>
 );
 
 const ArrowRightIcon = () => (
-  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+  <svg
+    className="w-5 h-5"
+    fill="none"
+    viewBox="0 0 24 24"
+    stroke="currentColor"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M14 5l7 7m0 0l-7 7m7-7H3"
+    />
   </svg>
 );
 
 export default function Home() {
   const [btcAmount, setBtcAmount] = useState("1.0");
   const [usdcAmount, setUsdcAmount] = useState("50000");
-  const [activeTab, setActiveTab] = useState<"swap" | "orders" | "demo">("swap");
+  const [activeTab, setActiveTab] = useState<"swap" | "orders" | "demo">(
+    "swap",
+  );
   const [isSwapping, setIsSwapping] = useState(false);
   const [demoStep, setDemoStep] = useState(0);
 
@@ -88,24 +125,34 @@ export default function Home() {
   const truncatedAddress = address ? formatAddress(address) : "";
   const isDarkPoolConfigured = useMemo(
     () => isConfiguredAddress(DARKPOOL_ADDRESS),
-    []
+    [],
   );
   const isVerifierConfigured = useMemo(
     () => isConfiguredAddress(VERIFIER_ADDRESS),
-    []
+    [],
   );
   const isDeploymentConfigured = isDarkPoolConfigured && isVerifierConfigured;
 
-  const btcAmountValue = useMemo(() => Number.parseFloat(btcAmount), [btcAmount]);
-  const usdcAmountValue = useMemo(() => Number.parseFloat(usdcAmount), [usdcAmount]);
-  const isAmountValid = Number.isFinite(btcAmountValue)
-    && Number.isFinite(usdcAmountValue)
-    && btcAmountValue > 0
-    && usdcAmountValue > 0;
-  const quotedRate = isAmountValid ? (usdcAmountValue / btcAmountValue).toLocaleString(undefined, {
-    maximumFractionDigits: 2,
-  }) : "0";
-  const canCreateOrder = isConnected && isAmountValid && isDeploymentConfigured && !isSwapping;
+  const btcAmountValue = useMemo(
+    () => Number.parseFloat(btcAmount),
+    [btcAmount],
+  );
+  const usdcAmountValue = useMemo(
+    () => Number.parseFloat(usdcAmount),
+    [usdcAmount],
+  );
+  const isAmountValid =
+    Number.isFinite(btcAmountValue) &&
+    Number.isFinite(usdcAmountValue) &&
+    btcAmountValue > 0 &&
+    usdcAmountValue > 0;
+  const quotedRate = isAmountValid
+    ? (usdcAmountValue / btcAmountValue).toLocaleString(undefined, {
+        maximumFractionDigits: 2,
+      })
+    : "0";
+  const canCreateOrder =
+    isConnected && isAmountValid && isDeploymentConfigured && !isSwapping;
   const swapDisabledReason = !isConnected
     ? "Connect your Starknet wallet to create an order."
     : !isDeploymentConfigured
@@ -116,19 +163,82 @@ export default function Home() {
 
   // Sample orders
   const orders: Order[] = [
-    { id: "1", type: "sell", amount: 1.5, price: 48500, status: "active", createdAt: new Date() },
-    { id: "2", type: "buy", amount: 0.5, price: 49200, status: "active", createdAt: new Date() },
-    { id: "3", type: "sell", amount: 2.0, price: 48000, status: "matched", createdAt: new Date() },
+    {
+      id: "1",
+      type: "sell",
+      amount: 1.5,
+      price: 48500,
+      status: "active",
+      createdAt: new Date(),
+    },
+    {
+      id: "2",
+      type: "buy",
+      amount: 0.5,
+      price: 49200,
+      status: "active",
+      createdAt: new Date(),
+    },
+    {
+      id: "3",
+      type: "sell",
+      amount: 2.0,
+      price: 48000,
+      status: "matched",
+      createdAt: new Date(),
+    },
   ];
 
   // Demo flow steps
   const swapSteps: SwapStep[] = [
-    { id: 1, title: "Generate Secret", description: "Alice creates secret S and hash H", status: demoStep >= 1 ? "complete" : demoStep === 0 ? "active" : "pending", actor: "alice" },
-    { id: 2, title: "Lock Bitcoin", description: "Alice locks BTC in HTLC with H", status: demoStep >= 2 ? "complete" : demoStep === 1 ? "active" : "pending", actor: "alice" },
-    { id: 3, title: "Create Order", description: "USDC order submitted to Starknet", status: demoStep >= 3 ? "complete" : demoStep === 2 ? "active" : "pending", actor: "contract" },
-    { id: 4, title: "Match Order", description: "Bob matches and deposits USDC", status: demoStep >= 4 ? "complete" : demoStep === 3 ? "active" : "pending", actor: "bob" },
-    { id: 5, title: "Claim USDC", description: "Alice reveals S, claims USDC", status: demoStep >= 5 ? "complete" : demoStep === 4 ? "active" : "pending", actor: "alice" },
-    { id: 6, title: "Claim Bitcoin", description: "Bob uses S to claim BTC", status: demoStep >= 6 ? "complete" : demoStep === 5 ? "active" : "pending", actor: "bob" },
+    {
+      id: 1,
+      title: "Generate Secret",
+      description: "Alice creates secret S and hash H",
+      status:
+        demoStep >= 1 ? "complete" : demoStep === 0 ? "active" : "pending",
+      actor: "alice",
+    },
+    {
+      id: 2,
+      title: "Lock Bitcoin",
+      description: "Alice locks BTC in HTLC with H",
+      status:
+        demoStep >= 2 ? "complete" : demoStep === 1 ? "active" : "pending",
+      actor: "alice",
+    },
+    {
+      id: 3,
+      title: "Create Order",
+      description: "USDC order submitted to Starknet",
+      status:
+        demoStep >= 3 ? "complete" : demoStep === 2 ? "active" : "pending",
+      actor: "contract",
+    },
+    {
+      id: 4,
+      title: "Match Order",
+      description: "Bob matches and deposits USDC",
+      status:
+        demoStep >= 4 ? "complete" : demoStep === 3 ? "active" : "pending",
+      actor: "bob",
+    },
+    {
+      id: 5,
+      title: "Claim USDC",
+      description: "Alice reveals S, claims USDC",
+      status:
+        demoStep >= 5 ? "complete" : demoStep === 4 ? "active" : "pending",
+      actor: "alice",
+    },
+    {
+      id: 6,
+      title: "Claim Bitcoin",
+      description: "Bob uses S to claim BTC",
+      status:
+        demoStep >= 6 ? "complete" : demoStep === 5 ? "active" : "pending",
+      actor: "bob",
+    },
   ];
 
   const handleSwap = async () => {
@@ -139,7 +249,7 @@ export default function Home() {
     setIsSwapping(true);
     // Simulate swap
     for (let step = 1; step <= 6; step++) {
-      await new Promise(resolve => setTimeout(resolve, 800));
+      await new Promise((resolve) => setTimeout(resolve, 800));
       setDemoStep(step);
     }
     setIsSwapping(false);
@@ -163,7 +273,9 @@ export default function Home() {
               <h1 className="text-xl font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
                 ShadowSwap
               </h1>
-              <p className="text-xs text-gray-500">Privacy-Preserving Dark Pool</p>
+              <p className="text-xs text-gray-500">
+                Privacy-Preserving Dark Pool
+              </p>
             </div>
           </div>
 
@@ -172,10 +284,11 @@ export default function Home() {
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab as typeof activeTab)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all capitalize ${activeTab === tab
-                  ? "bg-indigo-500/20 text-indigo-400 border border-indigo-500/30"
-                  : "text-gray-400 hover:text-white hover:bg-white/5"
-                  }`}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all capitalize ${
+                  activeTab === tab
+                    ? "bg-indigo-500/20 text-indigo-400 border border-indigo-500/30"
+                    : "text-gray-400 hover:text-white hover:bg-white/5"
+                }`}
               >
                 {tab}
               </button>
@@ -191,7 +304,9 @@ export default function Home() {
               <div className="flex items-center gap-2">
                 <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-indigo-500/10 border border-indigo-500/30">
                   <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                  <span className="text-sm text-indigo-300 font-mono">{truncatedAddress}</span>
+                  <span className="text-sm text-indigo-300 font-mono">
+                    {truncatedAddress}
+                  </span>
                 </div>
                 <button
                   onClick={() => disconnect()}
@@ -201,11 +316,10 @@ export default function Home() {
                 </button>
               </div>
             ) : (
-              <button
-                onClick={handleConnect}
-                className="btn-secondary text-sm"
-              >
-                {accountStatus === 'connecting' ? 'Connecting...' : 'Connect Wallet'}
+              <button onClick={handleConnect} className="btn-secondary text-sm">
+                {accountStatus === "connecting"
+                  ? "Connecting..."
+                  : "Connect Wallet"}
               </button>
             )}
           </div>
@@ -215,7 +329,6 @@ export default function Home() {
       {/* Main Content */}
       <main className="pt-24 pb-12 px-6">
         <div className="max-w-7xl mx-auto">
-
           {/* Hero Stats */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8 animate-fade-in">
             {[
@@ -224,12 +337,18 @@ export default function Home() {
               { label: "Avg. Spread", value: "0.12%", change: "-0.03%" },
               { label: "Active Pairs", value: "BTC/USDC", change: "" },
             ].map((stat, i) => (
-              <div key={i} className={`glass-card p-5 stagger-${i + 1} animate-fade-in`} style={{ opacity: 0 }}>
+              <div
+                key={i}
+                className={`glass-card p-5 stagger-${i + 1} animate-fade-in`}
+                style={{ opacity: 0 }}
+              >
                 <p className="text-sm text-gray-500 mb-1">{stat.label}</p>
                 <div className="flex items-baseline gap-2">
                   <span className="text-2xl font-bold">{stat.value}</span>
                   {stat.change && (
-                    <span className={`text-sm ${stat.change.startsWith('+') ? 'text-emerald-400' : 'text-red-400'}`}>
+                    <span
+                      className={`text-sm ${stat.change.startsWith("+") ? "text-emerald-400" : "text-red-400"}`}
+                    >
                       {stat.change}
                     </span>
                   )}
@@ -251,7 +370,9 @@ export default function Home() {
 
                 {/* From */}
                 <div className="mb-4">
-                  <label className="text-sm text-gray-400 mb-2 block">You Send</label>
+                  <label className="text-sm text-gray-400 mb-2 block">
+                    You Send
+                  </label>
                   <div className="flex items-center gap-3 p-4 rounded-xl bg-[var(--surface-1)] border border-[var(--glass-border)]">
                     <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-orange-500/10 text-orange-400">
                       <BitcoinIcon />
@@ -276,7 +397,9 @@ export default function Home() {
 
                 {/* To */}
                 <div className="mb-6">
-                  <label className="text-sm text-gray-400 mb-2 block">You Receive</label>
+                  <label className="text-sm text-gray-400 mb-2 block">
+                    You Receive
+                  </label>
                   <div className="flex items-center gap-3 p-4 rounded-xl bg-[var(--surface-1)] border border-[var(--glass-border)]">
                     <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-500/10 text-blue-400">
                       <USDCIcon />
@@ -296,7 +419,9 @@ export default function Home() {
                 <div className="p-4 rounded-xl bg-[var(--surface-1)] mb-6 space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-500">Rate</span>
-                    <span className="crypto-amount">1 BTC = {quotedRate} USDC</span>
+                    <span className="crypto-amount">
+                      1 BTC = {quotedRate} USDC
+                    </span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-500">Network Fee</span>
@@ -308,14 +433,30 @@ export default function Home() {
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-500">DarkPool</span>
-                    <span className={isDarkPoolConfigured ? "text-gray-300 font-mono" : "text-amber-400"}>
-                      {isDarkPoolConfigured ? formatAddress(DARKPOOL_ADDRESS) : "Not configured"}
+                    <span
+                      className={
+                        isDarkPoolConfigured
+                          ? "text-gray-300 font-mono"
+                          : "text-amber-400"
+                      }
+                    >
+                      {isDarkPoolConfigured
+                        ? formatAddress(DARKPOOL_ADDRESS)
+                        : "Not configured"}
                     </span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-500">Verifier</span>
-                    <span className={isVerifierConfigured ? "text-gray-300 font-mono" : "text-amber-400"}>
-                      {isVerifierConfigured ? formatAddress(VERIFIER_ADDRESS) : "Not configured"}
+                    <span
+                      className={
+                        isVerifierConfigured
+                          ? "text-gray-300 font-mono"
+                          : "text-amber-400"
+                      }
+                    >
+                      {isVerifierConfigured
+                        ? formatAddress(VERIFIER_ADDRESS)
+                        : "Not configured"}
                     </span>
                   </div>
                 </div>
@@ -328,12 +469,17 @@ export default function Home() {
                   {isSwapping ? "Processing Atomic Swap..." : "Create Order"}
                 </button>
                 {swapDisabledReason ? (
-                  <p className="text-xs text-amber-300 mt-3">{swapDisabledReason}</p>
+                  <p className="text-xs text-amber-300 mt-3">
+                    {swapDisabledReason}
+                  </p>
                 ) : null}
               </div>
 
               {/* Swap Flow Visualization */}
-              <div className="glass-card p-6 animate-fade-in stagger-2" style={{ opacity: 0 }}>
+              <div
+                className="glass-card p-6 animate-fade-in stagger-2"
+                style={{ opacity: 0 }}
+              >
                 <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
                   <LockIcon />
                   Atomic Swap Flow
@@ -345,27 +491,52 @@ export default function Home() {
                       key={step.id}
                       className={`flow-step ${step.status === "complete" ? "flow-step-complete" : ""}`}
                     >
-                      <div className={`flow-step-icon ${step.status === "complete" ? "bg-indigo-500 border-indigo-500" :
-                        step.status === "active" ? "border-indigo-500 animate-pulse" : ""
-                        }`}>
+                      <div
+                        className={`flow-step-icon ${
+                          step.status === "complete"
+                            ? "bg-indigo-500 border-indigo-500"
+                            : step.status === "active"
+                              ? "border-indigo-500 animate-pulse"
+                              : ""
+                        }`}
+                      >
                         {step.status === "complete" && <CheckIcon />}
-                        {step.status === "active" && <span className="w-2 h-2 rounded-full bg-indigo-500" />}
+                        {step.status === "active" && (
+                          <span className="w-2 h-2 rounded-full bg-indigo-500" />
+                        )}
                       </div>
                       <div>
                         <div className="flex items-center gap-2">
-                          <span className={`text-sm font-medium ${step.status === "complete" ? "text-indigo-400" :
-                            step.status === "active" ? "text-white" : "text-gray-500"
-                            }`}>
+                          <span
+                            className={`text-sm font-medium ${
+                              step.status === "complete"
+                                ? "text-indigo-400"
+                                : step.status === "active"
+                                  ? "text-white"
+                                  : "text-gray-500"
+                            }`}
+                          >
                             {step.title}
                           </span>
-                          <span className={`text-xs px-2 py-0.5 rounded-full ${step.actor === "alice" ? "bg-pink-500/20 text-pink-400" :
-                            step.actor === "bob" ? "bg-blue-500/20 text-blue-400" :
-                              "bg-purple-500/20 text-purple-400"
-                            }`}>
-                            {step.actor === "alice" ? "👩 Alice" : step.actor === "bob" ? "👨 Bob" : "📜 Contract"}
+                          <span
+                            className={`text-xs px-2 py-0.5 rounded-full ${
+                              step.actor === "alice"
+                                ? "bg-pink-500/20 text-pink-400"
+                                : step.actor === "bob"
+                                  ? "bg-blue-500/20 text-blue-400"
+                                  : "bg-purple-500/20 text-purple-400"
+                            }`}
+                          >
+                            {step.actor === "alice"
+                              ? "👩 Alice"
+                              : step.actor === "bob"
+                                ? "👨 Bob"
+                                : "📜 Contract"}
                           </span>
                         </div>
-                        <p className="text-xs text-gray-500 mt-1">{step.description}</p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {step.description}
+                        </p>
                       </div>
                     </div>
                   ))}
@@ -373,9 +544,16 @@ export default function Home() {
 
                 {demoStep === 6 && (
                   <div className="mt-6 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-center">
-                    <p className="text-emerald-400 font-medium">🎉 Swap Complete!</p>
-                    <p className="text-sm text-gray-400 mt-1">Trustless cross-chain swap successful</p>
-                    <button onClick={handleReset} className="mt-3 text-sm text-indigo-400 hover:underline">
+                    <p className="text-emerald-400 font-medium">
+                      🎉 Swap Complete!
+                    </p>
+                    <p className="text-sm text-gray-400 mt-1">
+                      Trustless cross-chain swap successful
+                    </p>
+                    <button
+                      onClick={handleReset}
+                      className="mt-3 text-sm text-indigo-400 hover:underline"
+                    >
                       Reset Demo
                     </button>
                   </div>
@@ -402,22 +580,44 @@ export default function Home() {
                   </thead>
                   <tbody>
                     {orders.map((order) => (
-                      <tr key={order.id} className="border-b border-[var(--glass-border)] hover:bg-white/5">
+                      <tr
+                        key={order.id}
+                        className="border-b border-[var(--glass-border)] hover:bg-white/5"
+                      >
                         <td className="py-4">
-                          <span className={`px-3 py-1 rounded-full text-sm font-medium ${order.type === "sell" ? "bg-red-500/10 text-red-400" : "bg-emerald-500/10 text-emerald-400"
-                            }`}>
+                          <span
+                            className={`px-3 py-1 rounded-full text-sm font-medium ${
+                              order.type === "sell"
+                                ? "bg-red-500/10 text-red-400"
+                                : "bg-emerald-500/10 text-emerald-400"
+                            }`}
+                          >
                             {order.type.toUpperCase()}
                           </span>
                         </td>
-                        <td className="py-4 crypto-amount">{order.amount.toFixed(4)}</td>
-                        <td className="py-4 crypto-amount">${order.price.toLocaleString()}</td>
-                        <td className="py-4 crypto-amount">${(order.amount * order.price).toLocaleString()}</td>
+                        <td className="py-4 crypto-amount">
+                          {order.amount.toFixed(4)}
+                        </td>
+                        <td className="py-4 crypto-amount">
+                          ${order.price.toLocaleString()}
+                        </td>
+                        <td className="py-4 crypto-amount">
+                          ${(order.amount * order.price).toLocaleString()}
+                        </td>
                         <td className="py-4">
                           <div className="flex items-center gap-2">
-                            <div className={`status-dot ${order.status === "active" ? "status-active" :
-                              order.status === "matched" ? "status-pending" : "status-inactive"
-                              }`} />
-                            <span className="text-sm capitalize">{order.status}</span>
+                            <div
+                              className={`status-dot ${
+                                order.status === "active"
+                                  ? "status-active"
+                                  : order.status === "matched"
+                                    ? "status-pending"
+                                    : "status-inactive"
+                              }`}
+                            />
+                            <span className="text-sm capitalize">
+                              {order.status}
+                            </span>
                           </div>
                         </td>
                         <td className="py-4">
@@ -441,7 +641,9 @@ export default function Home() {
                   <span className="text-3xl">👩</span>
                   <div>
                     <h3 className="text-lg font-semibold">Alice (Seller)</h3>
-                    <p className="text-sm text-gray-500">Sells BTC → Receives USDC</p>
+                    <p className="text-sm text-gray-500">
+                      Sells BTC → Receives USDC
+                    </p>
                   </div>
                 </div>
 
@@ -449,14 +651,18 @@ export default function Home() {
                   <div className="p-4 rounded-xl bg-[var(--surface-1)]">
                     <p className="text-sm text-gray-500 mb-2">Sending</p>
                     <div className="flex items-center gap-2">
-                      <span className="text-2xl font-bold crypto-amount crypto-negative">-1.0</span>
+                      <span className="text-2xl font-bold crypto-amount crypto-negative">
+                        -1.0
+                      </span>
                       <span className="text-orange-400">BTC</span>
                     </div>
                   </div>
                   <div className="p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/20">
                     <p className="text-sm text-gray-500 mb-2">Receiving</p>
                     <div className="flex items-center gap-2">
-                      <span className="text-2xl font-bold crypto-amount crypto-positive">+50,000</span>
+                      <span className="text-2xl font-bold crypto-amount crypto-positive">
+                        +50,000
+                      </span>
                       <span className="text-blue-400">USDC</span>
                     </div>
                   </div>
@@ -464,12 +670,17 @@ export default function Home() {
               </div>
 
               {/* Bob Side */}
-              <div className="glass-card p-6 animate-fade-in stagger-1" style={{ opacity: 0 }}>
+              <div
+                className="glass-card p-6 animate-fade-in stagger-1"
+                style={{ opacity: 0 }}
+              >
                 <div className="flex items-center gap-3 mb-6">
                   <span className="text-3xl">👨</span>
                   <div>
                     <h3 className="text-lg font-semibold">Bob (Buyer)</h3>
-                    <p className="text-sm text-gray-500">Pays USDC → Receives BTC</p>
+                    <p className="text-sm text-gray-500">
+                      Pays USDC → Receives BTC
+                    </p>
                   </div>
                 </div>
 
@@ -477,14 +688,18 @@ export default function Home() {
                   <div className="p-4 rounded-xl bg-[var(--surface-1)]">
                     <p className="text-sm text-gray-500 mb-2">Sending</p>
                     <div className="flex items-center gap-2">
-                      <span className="text-2xl font-bold crypto-amount crypto-negative">-50,000</span>
+                      <span className="text-2xl font-bold crypto-amount crypto-negative">
+                        -50,000
+                      </span>
                       <span className="text-blue-400">USDC</span>
                     </div>
                   </div>
                   <div className="p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/20">
                     <p className="text-sm text-gray-500 mb-2">Receiving</p>
                     <div className="flex items-center gap-2">
-                      <span className="text-2xl font-bold crypto-amount crypto-positive">+1.0</span>
+                      <span className="text-2xl font-bold crypto-amount crypto-positive">
+                        +1.0
+                      </span>
                       <span className="text-orange-400">BTC</span>
                     </div>
                   </div>
@@ -492,8 +707,13 @@ export default function Home() {
               </div>
 
               {/* Protocol Diagram */}
-              <div className="lg:col-span-2 glass-card p-6 animate-fade-in stagger-2" style={{ opacity: 0 }}>
-                <h3 className="text-lg font-semibold mb-6 text-center">Cross-Chain Atomic Swap Protocol</h3>
+              <div
+                className="lg:col-span-2 glass-card p-6 animate-fade-in stagger-2"
+                style={{ opacity: 0 }}
+              >
+                <h3 className="text-lg font-semibold mb-6 text-center">
+                  Cross-Chain Atomic Swap Protocol
+                </h3>
 
                 <div className="flex items-center justify-between max-w-4xl mx-auto">
                   {/* Bitcoin */}
@@ -517,8 +737,17 @@ export default function Home() {
                   {/* Starknet */}
                   <div className="text-center">
                     <div className="w-20 h-20 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center mx-auto mb-3">
-                      <svg className="w-8 h-8" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" strokeWidth="2" fill="none" />
+                      <svg
+                        className="w-8 h-8"
+                        viewBox="0 0 24 24"
+                        fill="currentColor"
+                      >
+                        <path
+                          d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          fill="none"
+                        />
                       </svg>
                     </div>
                     <p className="font-medium">Starknet</p>
@@ -546,14 +775,17 @@ export default function Home() {
 
                 <div className="mt-8 p-4 rounded-xl bg-[var(--surface-1)] text-center">
                   <p className="text-sm text-gray-400">
-                    <span className="text-indigo-400 font-medium">🔐 Zero Trust Required</span> — The same secret hash (H) links both chains.
-                    When Alice reveals the secret on Starknet, Bob can use it to claim Bitcoin.
+                    <span className="text-indigo-400 font-medium">
+                      🔐 Zero Trust Required
+                    </span>{" "}
+                    — The same secret hash (H) links both chains. When Alice
+                    reveals the secret on Starknet, Bob can use it to claim
+                    Bitcoin.
                   </p>
                 </div>
               </div>
             </div>
           )}
-
         </div>
       </main>
 
@@ -564,9 +796,15 @@ export default function Home() {
             © 2024 ShadowSwap. Privacy-preserving cross-chain atomic swaps.
           </p>
           <div className="flex items-center gap-4 text-sm text-gray-500">
-            <a href="#" className="hover:text-indigo-400 transition-colors">Docs</a>
-            <a href="#" className="hover:text-indigo-400 transition-colors">GitHub</a>
-            <a href="#" className="hover:text-indigo-400 transition-colors">Twitter</a>
+            <a href="#" className="hover:text-indigo-400 transition-colors">
+              Docs
+            </a>
+            <a href="#" className="hover:text-indigo-400 transition-colors">
+              GitHub
+            </a>
+            <a href="#" className="hover:text-indigo-400 transition-colors">
+              Twitter
+            </a>
           </div>
         </div>
       </footer>

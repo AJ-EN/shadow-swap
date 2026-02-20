@@ -4,11 +4,26 @@ import React from "react";
 import { sepolia } from "@starknet-react/chains";
 import {
     StarknetConfig,
-    publicProvider,
+    jsonRpcProvider,
     argent,
     braavos,
     useInjectedConnectors,
 } from "@starknet-react/core";
+
+const provider = jsonRpcProvider({
+    rpc: (chain) => {
+        const nodeUrl =
+            chain.rpcUrls.public.http[0] ??
+            chain.rpcUrls.default.http[0] ??
+            chain.rpcUrls.cartridge?.http?.[0];
+
+        if (!nodeUrl) {
+            return null;
+        }
+
+        return { nodeUrl };
+    },
+});
 
 function StarknetProviderInner({ children }: { children: React.ReactNode }) {
     const { connectors } = useInjectedConnectors({
@@ -20,7 +35,7 @@ function StarknetProviderInner({ children }: { children: React.ReactNode }) {
     return (
         <StarknetConfig
             chains={[sepolia]}
-            provider={publicProvider()}
+            provider={provider}
             connectors={connectors}
         >
             {children}

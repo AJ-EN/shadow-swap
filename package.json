@@ -1,0 +1,7 @@
+{
+  "name": "shadow_swap_workspace",
+  "private": true,
+  "scripts": {
+    "check:all": "npm --prefix backend run check && npm --prefix frontend run check"
+  }
+}
