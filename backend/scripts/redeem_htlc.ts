@@ -10,12 +10,14 @@ import * as bitcoin from 'bitcoinjs-lib';
 import * as ecc from 'tiny-secp256k1';
 import { ECPairFactory } from 'ecpair';
 import * as fs from 'fs';
+import * as path from 'path';
 
 // Initialize ECC library
 bitcoin.initEccLib(ecc);
 const ECPair = ECPairFactory(ecc);
 
 const network = bitcoin.networks.testnet;
+const DEFAULT_DATA_PATH = path.join(__dirname, '..', 'tmp', 'htlc_data.json');
 
 function witnessStackToScriptWitness(witness: Buffer[]): Buffer {
     let buffer = Buffer.allocUnsafe(0);
@@ -72,9 +74,9 @@ async function main() {
     console.log("═".repeat(60));
 
     // Load HTLC data
-    const dataPath = './htlc_data.json';
+    const dataPath = process.env.HTLC_DATA_PATH || DEFAULT_DATA_PATH;
     if (!fs.existsSync(dataPath)) {
-        console.error("❌ Error: htlc_data.json not found. Run test_bitcoin_real.ts first.");
+        console.error(`❌ Error: HTLC data file not found at ${dataPath}. Run test_bitcoin_real.ts first.`);
         process.exit(1);
     }
 

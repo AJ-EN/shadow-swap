@@ -43,8 +43,8 @@
   --color-success: var(--accent-success);
   --color-warning: var(--accent-warning);
   --color-danger: var(--accent-danger);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: "Manrope", "Avenir Next", "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", "SFMono-Regular", "Menlo", monospace;
 }
 
 /* ============================================================================

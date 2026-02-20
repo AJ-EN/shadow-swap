@@ -1,37 +1,96 @@
-# 🌑 ShadowSwap: Privacy-Preserving Atomic Swaps
+# ShadowSwap
 
-**ShadowSwap** is a non-custodial, privacy-first Dark Pool that enables Atomic Swaps between Bitcoin (L1) and Starknet (L2).
+Privacy-preserving BTC/USDC atomic swaps across Bitcoin and Starknet.
 
-Built for the **DoraHacks Re{define} Hackathon** (Privacy & Bitcoin Tracks).
+ShadowSwap targets the Starknet Re{define} Hackathon narratives:
+- `Privacy`: zero-knowledge commitments + dark-pool style order flow
+- `Bitcoin`: native HTLC settlement for trust-minimized BTC execution
 
-## 🏆 The Problem
-- **Bitcoin DeFi is risky:** Bridges like WBTC are centralized custody risks.
-- **DEXs trade transparency for privacy:** Your orders, amounts, and strategies are visible to MEV bots.
+## What the project does
 
-## 💡 The Solution
-ShadowSwap uses **Noir ZK Circuits** to hide order details (Amount, Price) and **HTLCs (Hash Time Locked Contracts)** to settle trades natively on Bitcoin.
-- **Zero Custody:** Funds never leave your wallet until the swap is atomic.
-- **Zero Knowledge:** The blockchain verifies the trade without knowing the amount.
+ShadowSwap coordinates a cross-chain atomic swap:
+1. Seller (Alice) generates a secret `S` and hash `H = SHA256(S)`.
+2. Alice locks BTC into a Bitcoin HTLC keyed by `H`.
+3. Alice creates a Starknet order locking USDC-side settlement terms.
+4. When `S` is revealed on Starknet, Bob can claim BTC on Bitcoin.
+5. If swap conditions fail, HTLC timeout path enables refund.
 
-## 🏗 Architecture
-- **Starknet:** Acts as the coordination layer and verifies ZK proofs.
-- **Bitcoin:** Acts as the settlement layer (HTLC).
-- **Noir:** Generates proofs of "Solvency and Intent" without revealing values.
-- **Garaga:** Verifies Noir proofs efficiently on Starknet.
+This design keeps custody with users while linking chain state through the same cryptographic secret.
 
-## 🚀 Quick Start
+## Repository layout
 
-### Prerequisites
-- Node.js v18+
-- Scarb (Cairo Package Manager)
-- Nargo (Noir Toolchain) v1.0.0-beta.18
-- Bitcoin Core (or Mutinynet access)
+```text
+frontend/                Next.js UI + Starknet wallet integration
+backend/client/          TypeScript HTLC library + deterministic tests
+backend/scripts/         Demo and manual BTC testnet helper scripts
+backend/contracts/       Cairo DarkPool contract
+backend/circuits/        Noir/Garaga proof components
+```
 
-### 1. Installation
+## Prerequisites
+
+- Node.js `>=20`
+- npm `>=10`
+- (Optional) `scarb` for Cairo compile/test
+- (Optional) `nargo` for Noir circuits
+
+## Quick start
+
+### 1) Install dependencies
+
 ```bash
-git clone [https://github.com/YOUR_USERNAME/shadow_swap.git](https://github.com/YOUR_USERNAME/shadow_swap.git)
-cd shadow_swap
-
-# Install Dependencies
-npm install
+cd backend && npm install
 cd client && npm install
+cd ../../frontend && npm install
+```
+
+### 2) Configure environment
+
+```bash
+cp frontend/.env.example frontend/.env.local
+cp backend/.env.example backend/.env
+```
+
+Set deployed Starknet contract addresses in `frontend/.env.local`:
+- `NEXT_PUBLIC_DARKPOOL_ADDRESS`
+- `NEXT_PUBLIC_VERIFIER_ADDRESS`
+
+### 3) Run checks
+
+```bash
+cd backend/client && npm run check
+cd ../../frontend && npm run check
+```
+
+### 4) Run local demo flows
+
+```bash
+cd backend/client && npm run demo
+cd ../ && npm run demo
+cd ../../frontend && npm run dev
+```
+
+## Security and engineering practices applied
+
+- Strict runtime validation in HTLC client (txid, amounts, keys, address, timeout).
+- Secure randomness for secret generation (`crypto.randomBytes`).
+- Deterministic assertion-based tests using `node:test`.
+- CI pipeline for backend client and frontend checks:
+  - `.github/workflows/ci.yml`
+- Environment templates for reproducible setup:
+  - `frontend/.env.example`
+  - `backend/.env.example`
+
+## Hackathon submission checklist
+
+- [ ] Working demo deployed on Starknet (testnet/mainnet)
+- [x] Public GitHub repository
+- [ ] Project description (<= 500 words)
+- [ ] 3-minute demo video
+- [ ] Starknet wallet address for prize distribution
+
+## Notes
+
+- `frontend` currently simulates order book/demo progression for presentation.
+- `backend/client` is the most production-hardened module in this repo and should be used as the reference integration layer.
+- Cairo/Noir toolchains are optional locally; if missing, frontend + TypeScript checks still run.

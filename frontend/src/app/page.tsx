@@ -1,12 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useAccount, useConnect, useDisconnect } from "@starknet-react/core";
-import { useCallback } from "react";
 
 // Contract addresses (deployed on Sepolia)
 const DARKPOOL_ADDRESS = process.env.NEXT_PUBLIC_DARKPOOL_ADDRESS || "0x0";
 const VERIFIER_ADDRESS = process.env.NEXT_PUBLIC_VERIFIER_ADDRESS || "0x0";
+
+function isConfiguredAddress(address: string): boolean {
+  return /^0x[0-9a-fA-F]{64}$/.test(address);
+}
+
+function formatAddress(address: string): string {
+  return `${address.slice(0, 6)}...${address.slice(-4)}`;
+}
 
 // Types
 interface Order {
@@ -78,9 +85,34 @@ export default function Home() {
     }
   }, [connectors, connect]);
 
-  const truncatedAddress = address
-    ? `${address.slice(0, 6)}...${address.slice(-4)}`
-    : "";
+  const truncatedAddress = address ? formatAddress(address) : "";
+  const isDarkPoolConfigured = useMemo(
+    () => isConfiguredAddress(DARKPOOL_ADDRESS),
+    []
+  );
+  const isVerifierConfigured = useMemo(
+    () => isConfiguredAddress(VERIFIER_ADDRESS),
+    []
+  );
+  const isDeploymentConfigured = isDarkPoolConfigured && isVerifierConfigured;
+
+  const btcAmountValue = useMemo(() => Number.parseFloat(btcAmount), [btcAmount]);
+  const usdcAmountValue = useMemo(() => Number.parseFloat(usdcAmount), [usdcAmount]);
+  const isAmountValid = Number.isFinite(btcAmountValue)
+    && Number.isFinite(usdcAmountValue)
+    && btcAmountValue > 0
+    && usdcAmountValue > 0;
+  const quotedRate = isAmountValid ? (usdcAmountValue / btcAmountValue).toLocaleString(undefined, {
+    maximumFractionDigits: 2,
+  }) : "0";
+  const canCreateOrder = isConnected && isAmountValid && isDeploymentConfigured && !isSwapping;
+  const swapDisabledReason = !isConnected
+    ? "Connect your Starknet wallet to create an order."
+    : !isDeploymentConfigured
+      ? "Set NEXT_PUBLIC_DARKPOOL_ADDRESS and NEXT_PUBLIC_VERIFIER_ADDRESS to deployed Sepolia contracts."
+      : !isAmountValid
+        ? "Enter valid positive BTC and USDC amounts."
+        : "";
 
   // Sample orders
   const orders: Order[] = [
@@ -100,11 +132,15 @@ export default function Home() {
   ];
 
   const handleSwap = async () => {
+    if (!canCreateOrder) {
+      return;
+    }
+
     setIsSwapping(true);
     // Simulate swap
-    for (let i = 0; i <= 6; i++) {
+    for (let step = 1; step <= 6; step++) {
       await new Promise(resolve => setTimeout(resolve, 800));
-      setDemoStep(i);
+      setDemoStep(step);
     }
     setIsSwapping(false);
   };
@@ -260,7 +296,7 @@ export default function Home() {
                 <div className="p-4 rounded-xl bg-[var(--surface-1)] mb-6 space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-500">Rate</span>
-                    <span className="crypto-amount">1 BTC = 50,000 USDC</span>
+                    <span className="crypto-amount">1 BTC = {quotedRate} USDC</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-500">Network Fee</span>
@@ -270,15 +306,30 @@ export default function Home() {
                     <span className="text-gray-500">Timeout</span>
                     <span className="text-gray-400">~6 hours</span>
                   </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-500">DarkPool</span>
+                    <span className={isDarkPoolConfigured ? "text-gray-300 font-mono" : "text-amber-400"}>
+                      {isDarkPoolConfigured ? formatAddress(DARKPOOL_ADDRESS) : "Not configured"}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-500">Verifier</span>
+                    <span className={isVerifierConfigured ? "text-gray-300 font-mono" : "text-amber-400"}>
+                      {isVerifierConfigured ? formatAddress(VERIFIER_ADDRESS) : "Not configured"}
+                    </span>
+                  </div>
                 </div>
 
                 <button
                   onClick={handleSwap}
-                  disabled={isSwapping}
+                  disabled={!canCreateOrder}
                   className="btn-primary w-full text-lg py-4 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isSwapping ? "Processing Atomic Swap..." : "Create Order"}
                 </button>
+                {swapDisabledReason ? (
+                  <p className="text-xs text-amber-300 mt-3">{swapDisabledReason}</p>
+                ) : null}
               </div>
 
               {/* Swap Flow Visualization */}
@@ -350,7 +401,7 @@ export default function Home() {
                     </tr>
                   </thead>
                   <tbody>
-                    {orders.map((order, i) => (
+                    {orders.map((order) => (
                       <tr key={order.id} className="border-b border-[var(--glass-border)] hover:bg-white/5">
                         <td className="py-4">
                           <span className={`px-3 py-1 rounded-full text-sm font-medium ${order.type === "sell" ? "bg-red-500/10 text-red-400" : "bg-emerald-500/10 text-emerald-400"

@@ -2,14 +2,15 @@
     "name": "@shadowswap/client",
     "version": "0.1.0",
     "description": "ShadowSwap Bitcoin settlement client",
-    "main": "dist/index.js",
-    "types": "dist/index.d.ts",
+    "main": "dist/btc-htlc.js",
+    "types": "dist/btc-htlc.d.ts",
     "scripts": {
         "build": "tsc",
-        "dev": "ts-node src/index.ts",
+        "dev": "ts-node src/demo_flow.ts",
         "test": "ts-node src/btc-htlc.test.ts",
         "demo": "ts-node src/demo_flow.ts",
-        "lint": "eslint src/**/*.ts"
+        "lint": "tsc --noEmit",
+        "check": "npm run lint && npm run build && npm run test"
     },
     "dependencies": {
         "bitcoinjs-lib": "^6.1.6",

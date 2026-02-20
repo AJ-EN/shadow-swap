@@ -17,6 +17,7 @@ import {
     TESTNET,
 } from '../client/src/btc-htlc';
 import * as bitcoin from 'bitcoinjs-lib';
+import { randomBytes } from 'crypto';
 
 // ============================================================================
 // CONFIGURATION
@@ -216,9 +217,7 @@ async function runDemo() {
     printStep(3, 'Alice', 'Lock BTC in HTLC');
 
     // Mock transaction ID (in real scenario this comes from Bitcoin network)
-    const mockBtcTxId = Buffer.from(
-        Array.from({ length: 32 }, () => Math.floor(Math.random() * 256))
-    ).toString('hex');
+    const mockBtcTxId = randomBytes(32).toString('hex');
 
     console.log(`📤 Sending ${DEMO_CONFIG.BTC_AMOUNT} BTC to HTLC...`);
     console.log(`   To Address: ${htlc.address}`);

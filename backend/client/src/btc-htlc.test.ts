@@ -1,126 +1,193 @@
-/**
- * Test script for HTLC generation and redemption
- */
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import * as bitcoin from 'bitcoinjs-lib';
+import * as ecc from 'tiny-secp256k1';
+import { ECPairFactory } from 'ecpair';
 
 import {
-    generateHTLC,
-    generateTestKeyPair,
-    generateSecret,
+    TESTNET,
     createRedeemTx,
     createRefundTx,
-    TESTNET
+    generateHTLC,
+    generateSecret,
+    sha256,
 } from './btc-htlc';
-import * as bitcoin from 'bitcoinjs-lib';
 
-console.log('=== ShadowSwap HTLC Test ===\n');
+bitcoin.initEccLib(ecc);
+const ECPair = ECPairFactory(ecc);
 
-// Generate test keys
-console.log('Generating test keypairs...');
-const buyer = generateTestKeyPair();
-const seller = generateTestKeyPair();
+const BUYER_PRIVATE_KEY = Buffer.from('1'.repeat(64), 'hex');
+const SELLER_PRIVATE_KEY = Buffer.from('2'.repeat(64), 'hex');
+const MOCK_TXID = 'a'.repeat(64);
+const MOCK_VOUT = 0;
+const MOCK_AMOUNT_SATS = 100_000;
+const MOCK_FEE_SATS = 500;
 
-console.log('Buyer Public Key:', buyer.publicKey);
-console.log('Seller Public Key:', seller.publicKey);
+function createFixture() {
+    const buyer = ECPair.fromPrivateKey(BUYER_PRIVATE_KEY, { network: TESTNET });
+    const seller = ECPair.fromPrivateKey(SELLER_PRIVATE_KEY, { network: TESTNET });
+    const secret = Buffer.alloc(32, 0x7);
+    const secretHash = sha256(secret);
 
-// Generate secret and hash
-const { secret, secretHash } = generateSecret();
-console.log('\nSecret (preimage):', secret.toString('hex'));
-console.log('Secret Hash (H):', secretHash.toString('hex'));
+    const htlc = generateHTLC(
+        secretHash,
+        Buffer.from(buyer.publicKey),
+        Buffer.from(seller.publicKey),
+        144,
+        TESTNET
+    );
 
-// Set timeout (144 blocks ≈ 1 day)
-const timeout = 144;
+    const buyerDestination = bitcoin.payments.p2wpkh({
+        pubkey: Buffer.from(buyer.publicKey),
+        network: TESTNET,
+    }).address;
+    const sellerDestination = bitcoin.payments.p2wpkh({
+        pubkey: Buffer.from(seller.publicKey),
+        network: TESTNET,
+    }).address;
 
-// Generate HTLC
-console.log('\n--- Generating HTLC ---');
-const htlc = generateHTLC(
-    secretHash,
-    buyer.publicKey,
-    seller.publicKey,
-    timeout
-);
+    assert.ok(buyerDestination, 'buyer destination should be derivable');
+    assert.ok(sellerDestination, 'seller destination should be derivable');
 
-console.log('\n📜 ASM Script:');
-console.log(htlc.asm);
+    return {
+        buyer,
+        seller,
+        secret,
+        secretHash,
+        htlc,
+        buyerDestination,
+        sellerDestination,
+    };
+}
 
-console.log('\n📍 P2WSH Address (Testnet):');
-console.log(htlc.address);
+test('generateHTLC builds a valid P2WSH script and address', () => {
+    const { htlc, secretHash } = createFixture();
 
-console.log('\n🔐 Redeem Script (Hex):');
-console.log(htlc.redeemScriptHex);
+    assert.equal(htlc.redeemScript.length > 0, true);
+    assert.equal(htlc.redeemScriptHex.length > 0, true);
+    assert.equal(htlc.witnessScriptHash.length, 32);
+    assert.equal(htlc.address.startsWith('tb1'), true);
+    assert.equal(htlc.asm.includes('OP_SHA256'), true);
+    assert.equal(htlc.asm.includes(secretHash.toString('hex')), true);
+});
 
-console.log('\n✅ HTLC generated successfully!');
+test('createRedeemTx builds a claim transaction with the secret in witness', () => {
+    const { buyer, htlc, secret, buyerDestination } = createFixture();
 
-// Test Redeem Transaction (Buyer claiming with secret)
-console.log('\n--- Testing Redeem Transaction (Buyer Claims) ---');
-
-// Simulate a previous transaction (in real usage this would be a real txid)
-const mockPrevTxId = 'a'.repeat(64); // 64 hex chars = 32 bytes
-const mockPrevIndex = 0;
-const mockAmount = 100000; // 0.001 BTC in sats
-
-// Generate a destination address for the buyer
-const buyerDestination = bitcoin.payments.p2wpkh({
-    pubkey: Buffer.from(buyer.publicKey, 'hex'),
-    network: TESTNET,
-}).address!;
-
-console.log('Buyer destination address:', buyerDestination);
-
-try {
     const redeemTx = createRedeemTx(
-        mockPrevTxId,
-        mockPrevIndex,
-        mockAmount,
-        buyer.privateKey,
+        MOCK_TXID,
+        MOCK_VOUT,
+        MOCK_AMOUNT_SATS,
+        Buffer.from(buyer.privateKey!),
         secret,
         htlc.redeemScript,
         buyerDestination,
-        500 // fee
+        MOCK_FEE_SATS
     );
 
-    console.log('\n📤 Redeem Transaction:');
-    console.log('TxID:', redeemTx.txId);
-    console.log('Tx Hex (first 100 chars):', redeemTx.txHex.slice(0, 100) + '...');
-    console.log('Witness stack constructed correctly ✅');
-} catch (err) {
-    console.log('Redeem TX construction test passed (mock data would fail on real network)');
-}
+    const witness = redeemTx.tx.ins[0]?.witness;
+    assert.ok(witness, 'redeem witness should exist');
+    assert.equal(witness.length, 4);
+    assert.deepEqual(witness[1], secret);
+    assert.deepEqual(witness[2], Buffer.from([0x01]));
+    assert.equal(redeemTx.txHex.length > 0, true);
+    assert.equal(redeemTx.txId.length, 64);
+});
 
-// Test Refund Transaction (Seller refunding after timeout)
-console.log('\n--- Testing Refund Transaction (Seller Refunds) ---');
+test('createRefundTx builds a timeout refund transaction with empty branch selector', () => {
+    const { seller, htlc, sellerDestination } = createFixture();
 
-const sellerDestination = bitcoin.payments.p2wpkh({
-    pubkey: Buffer.from(seller.publicKey, 'hex'),
-    network: TESTNET,
-}).address!;
-
-console.log('Seller destination address:', sellerDestination);
-
-try {
+    const timeout = 144;
     const refundTx = createRefundTx(
-        mockPrevTxId,
-        mockPrevIndex,
-        mockAmount,
-        seller.privateKey,
+        MOCK_TXID,
+        MOCK_VOUT,
+        MOCK_AMOUNT_SATS,
+        Buffer.from(seller.privateKey!),
         htlc.redeemScript,
         sellerDestination,
         timeout,
-        500 // fee
+        MOCK_FEE_SATS
     );
 
-    console.log('\n📤 Refund Transaction:');
-    console.log('TxID:', refundTx.txId);
-    console.log('Tx Hex (first 100 chars):', refundTx.txHex.slice(0, 100) + '...');
-    console.log('Sequence set to:', timeout, '(for CSV timelock) ✅');
-} catch (err) {
-    console.log('Refund TX construction test passed (mock data would fail on real network)');
-}
+    const witness = refundTx.tx.ins[0]?.witness;
+    assert.ok(witness, 'refund witness should exist');
+    assert.equal(witness.length, 3);
+    assert.deepEqual(witness[1], Buffer.alloc(0));
+    assert.equal(refundTx.tx.ins[0]?.sequence, timeout);
+    assert.equal(refundTx.txId.length, 64);
+});
 
-console.log('\n--- Script Explanation ---');
-console.log('Path A (Buyer claims with preimage):');
-console.log('  - Witness: [<signature>, <preimage>, 0x01, <redeemScript>]');
-console.log('  - Preimage must SHA256 to the secret hash');
-console.log('\nPath B (Seller refunds after timeout):');
-console.log('  - Wait for', timeout, 'blocks');
-console.log('  - Witness: [<signature>, <empty>, <redeemScript>]');
-console.log('  - Sequence number must be >=', timeout);
+test('validation rejects malformed txid and invalid secret size', () => {
+    const { buyer, htlc, secret, buyerDestination } = createFixture();
+
+    assert.throws(
+        () =>
+            createRedeemTx(
+                '1234',
+                MOCK_VOUT,
+                MOCK_AMOUNT_SATS,
+                Buffer.from(buyer.privateKey!),
+                secret,
+                htlc.redeemScript,
+                buyerDestination
+            ),
+        /Invalid prevTxId/
+    );
+
+    assert.throws(
+        () =>
+            createRedeemTx(
+                MOCK_TXID,
+                MOCK_VOUT,
+                MOCK_AMOUNT_SATS,
+                Buffer.from(buyer.privateKey!),
+                Buffer.alloc(31, 1),
+                htlc.redeemScript,
+                buyerDestination
+            ),
+        /Invalid secret length/
+    );
+});
+
+test('validation rejects invalid address and fee over amount', () => {
+    const { seller, htlc, sellerDestination } = createFixture();
+
+    assert.throws(
+        () =>
+            createRefundTx(
+                MOCK_TXID,
+                MOCK_VOUT,
+                MOCK_AMOUNT_SATS,
+                Buffer.from(seller.privateKey!),
+                htlc.redeemScript,
+                'not-an-address',
+                144
+            ),
+        /Invalid destination address/
+    );
+
+    assert.throws(
+        () =>
+            createRefundTx(
+                MOCK_TXID,
+                MOCK_VOUT,
+                300,
+                Buffer.from(seller.privateKey!),
+                htlc.redeemScript,
+                sellerDestination,
+                144,
+                500
+            ),
+        /feeSats/
+    );
+});
+
+test('generateSecret uses secure randomness and returns SHA256(secret)', () => {
+    const a = generateSecret();
+    const b = generateSecret();
+
+    assert.equal(a.secret.length, 32);
+    assert.equal(a.secretHash.length, 32);
+    assert.deepEqual(sha256(a.secret), a.secretHash);
+    assert.notDeepEqual(a.secret, b.secret);
+});

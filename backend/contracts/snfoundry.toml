@@ -1,8 +1,9 @@
 [sncast.sepolia]
 account = "shadowswap"
-url = "https://free-rpc.nethermind.io/sepolia-juno"
-accounts-file = "accounts.json"
+url = "https://api.cartridge.gg/x/starknet/sepolia"
+accounts-file = "/Users/ayushjangid/.starknet_accounts/starknet_open_zeppelin_accounts.json"
 
 [sncast.default]
 account = "shadowswap"
-
+url = "https://api.cartridge.gg/x/starknet/sepolia"
+accounts-file = "/Users/ayushjangid/.starknet_accounts/starknet_open_zeppelin_accounts.json"

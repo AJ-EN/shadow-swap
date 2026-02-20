@@ -4,7 +4,13 @@
   "description": "A privacy-preserving Bitcoin Dark Pool on Starknet.",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "client:build": "npm --prefix client run build",
+    "client:test": "npm --prefix client run test",
+    "client:check": "npm --prefix client run check",
+    "demo": "ts-node scripts/demo_flow.ts",
+    "btc:testnet:init": "ts-node scripts/test_bitcoin_real.ts",
+    "btc:testnet:redeem": "ts-node scripts/redeem_htlc.ts",
+    "check": "npm run client:check"
   },
   "keywords": [],
   "author": "",

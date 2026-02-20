@@ -10,6 +10,8 @@ import * as bitcoin from 'bitcoinjs-lib';
 import * as ecc from 'tiny-secp256k1';
 import { ECPairFactory } from 'ecpair';
 import * as crypto from 'crypto';
+import * as fs from 'fs';
+import * as path from 'path';
 
 // Initialize ECC library
 bitcoin.initEccLib(ecc);
@@ -17,6 +19,7 @@ const ECPair = ECPairFactory(ecc);
 
 // Mutinynet uses testnet network params
 const network = bitcoin.networks.testnet;
+const DEFAULT_DATA_PATH = path.join(__dirname, '..', 'tmp', 'htlc_data.json');
 
 function main() {
     console.log("═".repeat(60));
@@ -120,8 +123,8 @@ function main() {
     console.log("\n" + JSON.stringify(redeemData, null, 2));
 
     // Save to file for later use
-    const fs = require('fs');
-    const dataPath = './htlc_data.json';
+    const dataPath = process.env.HTLC_DATA_PATH || DEFAULT_DATA_PATH;
+    fs.mkdirSync(path.dirname(dataPath), { recursive: true });
     fs.writeFileSync(dataPath, JSON.stringify(redeemData, null, 2));
     console.log(`\n✅ Data saved to: ${dataPath}`);
 

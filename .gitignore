@@ -11,6 +11,8 @@ out/
 .env
 .env.local
 .env.*
+!.env.example
+!**/.env.example
 
 # Noir / Scarb / Cargo
 target/
@@ -26,3 +28,5 @@ Scarb.lock
 
 # Bitcoin Wallet Files (Just in case)
 wallet.dat
+backend/tmp/
+backend/htlc_data.json

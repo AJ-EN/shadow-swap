@@ -1,0 +1,24 @@
+{
+  "network": "mutinynet (signet/testnet params)",
+  "htlc": {
+    "address": "tb1q...",
+    "redeemScriptHex": "63a8...",
+    "witnessScriptHash": "..."
+  },
+  "secret": {
+    "preimage": "hex-32-byte-preimage",
+    "hash": "sha256(preimage)"
+  },
+  "alice": {
+    "publicKey": "02...",
+    "privateKeyWIF": "c..."
+  },
+  "bob": {
+    "publicKey": "03...",
+    "privateKeyWIF": "c..."
+  },
+  "timeout": {
+    "blocks": 10,
+    "note": "Alice can refund after timeout"
+  }
+}

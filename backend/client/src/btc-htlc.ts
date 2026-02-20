@@ -9,6 +9,7 @@
 import * as bitcoin from 'bitcoinjs-lib';
 import * as ecc from 'tiny-secp256k1';
 import { ECPairFactory } from 'ecpair';
+import { randomBytes } from 'crypto';
 
 // Initialize ECC library for bitcoinjs-lib
 bitcoin.initEccLib(ecc);
@@ -16,6 +17,63 @@ const ECPair = ECPairFactory(ecc);
 
 // Network configuration (testnet for development)
 const TESTNET = bitcoin.networks.testnet;
+const MAX_TIMEOUT = 0xFFFFFF;
+const HEX_RE = /^[0-9a-fA-F]+$/;
+
+function toBuffer(input: string | Buffer, inputName: string): Buffer {
+    if (Buffer.isBuffer(input)) {
+        return input;
+    }
+
+    if (input.length === 0) {
+        throw new Error(`${inputName} cannot be empty`);
+    }
+    if (input.length % 2 !== 0 || !HEX_RE.test(input)) {
+        throw new Error(`${inputName} must be a valid even-length hex string`);
+    }
+    return Buffer.from(input, 'hex');
+}
+
+function assertBufferLength(buf: Buffer, expectedLength: number, inputName: string): void {
+    if (buf.length !== expectedLength) {
+        throw new Error(`Invalid ${inputName} length: expected ${expectedLength} bytes, got ${buf.length}`);
+    }
+}
+
+function assertIntegerRange(value: number, inputName: string, min: number, max: number): void {
+    if (!Number.isInteger(value) || value < min || value > max) {
+        throw new Error(`Invalid ${inputName}: expected integer in [${min}, ${max}], got ${value}`);
+    }
+}
+
+function assertValidTxInput(prevTxId: string, prevIndex: number, amountSats: number, feeSats: number): void {
+    if (!HEX_RE.test(prevTxId) || prevTxId.length !== 64) {
+        throw new Error('Invalid prevTxId: expected a 32-byte hex string');
+    }
+    assertIntegerRange(prevIndex, 'prevIndex', 0, Number.MAX_SAFE_INTEGER);
+    assertIntegerRange(amountSats, 'amountSats', 1, Number.MAX_SAFE_INTEGER);
+    assertIntegerRange(feeSats, 'feeSats', 1, Number.MAX_SAFE_INTEGER);
+    if (feeSats >= amountSats) {
+        throw new Error(`feeSats (${feeSats}) must be lower than amountSats (${amountSats})`);
+    }
+}
+
+function assertValidAddress(address: string, network: bitcoin.Network): void {
+    try {
+        bitcoin.address.toOutputScript(address, network);
+    } catch {
+        throw new Error(`Invalid destination address for selected network: ${address}`);
+    }
+}
+
+function createKeyPair(privateKey: Buffer, network: bitcoin.Network) {
+    assertBufferLength(privateKey, 32, 'private key');
+    try {
+        return ECPair.fromPrivateKey(privateKey, { network });
+    } catch {
+        throw new Error('Invalid private key');
+    }
+}
 
 /**
  * Result of HTLC generation
@@ -60,29 +118,21 @@ export function generateHTLC(
     network: bitcoin.Network = TESTNET
 ): HTLCResult {
     // Convert inputs to Buffers
-    const secretHashBuf = typeof secretHash === 'string'
-        ? Buffer.from(secretHash, 'hex')
-        : secretHash;
-    const buyerPubKeyBuf = typeof buyerPubKey === 'string'
-        ? Buffer.from(buyerPubKey, 'hex')
-        : buyerPubKey;
-    const sellerPubKeyBuf = typeof sellerPubKey === 'string'
-        ? Buffer.from(sellerPubKey, 'hex')
-        : sellerPubKey;
+    const secretHashBuf = toBuffer(secretHash, 'secretHash');
+    const buyerPubKeyBuf = toBuffer(buyerPubKey, 'buyerPubKey');
+    const sellerPubKeyBuf = toBuffer(sellerPubKey, 'sellerPubKey');
 
     // Validate inputs
-    if (secretHashBuf.length !== 32) {
-        throw new Error(`Invalid secret hash length: expected 32 bytes, got ${secretHashBuf.length}`);
+    assertBufferLength(secretHashBuf, 32, 'secret hash');
+    assertBufferLength(buyerPubKeyBuf, 33, 'buyer public key');
+    assertBufferLength(sellerPubKeyBuf, 33, 'seller public key');
+    if (!ecc.isPoint(buyerPubKeyBuf)) {
+        throw new Error('Invalid buyer public key: not a valid secp256k1 point');
     }
-    if (buyerPubKeyBuf.length !== 33) {
-        throw new Error(`Invalid buyer public key length: expected 33 bytes (compressed), got ${buyerPubKeyBuf.length}`);
+    if (!ecc.isPoint(sellerPubKeyBuf)) {
+        throw new Error('Invalid seller public key: not a valid secp256k1 point');
     }
-    if (sellerPubKeyBuf.length !== 33) {
-        throw new Error(`Invalid seller public key length: expected 33 bytes (compressed), got ${sellerPubKeyBuf.length}`);
-    }
-    if (timeout <= 0 || timeout > 0xFFFFFF) {
-        throw new Error(`Invalid timeout: must be between 1 and 16777215, got ${timeout}`);
-    }
+    assertIntegerRange(timeout, 'timeout', 1, MAX_TIMEOUT);
 
     // Encode timeout as a minimal script number
     const timeoutBuffer = encodeScriptNumber(timeout);
@@ -173,35 +223,32 @@ export function createRedeemTx(
     network: bitcoin.Network = TESTNET
 ): RedeemTxResult {
     // Convert inputs to proper formats
-    const privateKeyBuf = typeof privateKey === 'string'
-        ? Buffer.from(privateKey, 'hex')
-        : privateKey;
-    const secretBuf = typeof secret === 'string'
-        ? Buffer.from(secret, 'hex')
-        : secret;
-    const redeemScriptBuf = typeof redeemScript === 'string'
-        ? Buffer.from(redeemScript, 'hex')
-        : redeemScript;
+    const privateKeyBuf = toBuffer(privateKey, 'privateKey');
+    const secretBuf = toBuffer(secret, 'secret');
+    const redeemScriptBuf = toBuffer(redeemScript, 'redeemScript');
 
     // Create keypair from private key
-    const keyPair = ECPair.fromPrivateKey(privateKeyBuf, { network });
+    const keyPair = createKeyPair(privateKeyBuf, network);
 
     // Validate secret length (should be 32 bytes for SHA256 preimage)
-    if (secretBuf.length !== 32) {
-        throw new Error(`Invalid secret length: expected 32 bytes, got ${secretBuf.length}`);
+    assertBufferLength(secretBuf, 32, 'secret');
+    if (redeemScriptBuf.length === 0) {
+        throw new Error('redeemScript cannot be empty');
     }
+    assertValidTxInput(prevTxId, prevIndex, amountSats, feeSats);
+    assertValidAddress(destinationAddress, network);
 
     // Calculate output amount (input - fee)
     const outputAmount = amountSats - feeSats;
-    if (outputAmount <= 0) {
-        throw new Error(`Output amount must be positive: ${amountSats} - ${feeSats} = ${outputAmount}`);
-    }
 
     // Create the P2WSH payment to get the witness script hash
     const p2wsh = bitcoin.payments.p2wsh({
         redeem: { output: redeemScriptBuf, network },
         network,
     });
+    if (!p2wsh.output) {
+        throw new Error('Failed to derive P2WSH output script');
+    }
 
     // Build the transaction
     const psbt = new bitcoin.Psbt({ network });
@@ -290,27 +337,29 @@ export function createRefundTx(
     network: bitcoin.Network = TESTNET
 ): RedeemTxResult {
     // Convert inputs to proper formats
-    const privateKeyBuf = typeof privateKey === 'string'
-        ? Buffer.from(privateKey, 'hex')
-        : privateKey;
-    const redeemScriptBuf = typeof redeemScript === 'string'
-        ? Buffer.from(redeemScript, 'hex')
-        : redeemScript;
+    const privateKeyBuf = toBuffer(privateKey, 'privateKey');
+    const redeemScriptBuf = toBuffer(redeemScript, 'redeemScript');
 
     // Create keypair from private key
-    const keyPair = ECPair.fromPrivateKey(privateKeyBuf, { network });
+    const keyPair = createKeyPair(privateKeyBuf, network);
+    if (redeemScriptBuf.length === 0) {
+        throw new Error('redeemScript cannot be empty');
+    }
+    assertIntegerRange(timeout, 'timeout', 1, MAX_TIMEOUT);
+    assertValidTxInput(prevTxId, prevIndex, amountSats, feeSats);
+    assertValidAddress(destinationAddress, network);
 
     // Calculate output amount (input - fee)
     const outputAmount = amountSats - feeSats;
-    if (outputAmount <= 0) {
-        throw new Error(`Output amount must be positive: ${amountSats} - ${feeSats} = ${outputAmount}`);
-    }
 
     // Create the P2WSH payment
     const p2wsh = bitcoin.payments.p2wsh({
         redeem: { output: redeemScriptBuf, network },
         network,
     });
+    if (!p2wsh.output) {
+        throw new Error('Failed to derive P2WSH output script');
+    }
 
     // Build the transaction
     const psbt = new bitcoin.Psbt({ network });
@@ -371,7 +420,7 @@ export function createRefundTx(
  * Converts a witness stack array to the serialized witness format.
  */
 function witnessStackToScriptWitness(witness: Buffer[]): Buffer {
-    let buffer = Buffer.allocUnsafe(0);
+    let buffer = Buffer.alloc(0);
 
     function writeVarInt(n: number): Buffer {
         if (n < 0xfd) {
@@ -449,7 +498,7 @@ export function generateTestKeyPair(network: bitcoin.Network = TESTNET) {
  * Helper to compute SHA256 hash of a preimage
  */
 export function sha256(preimage: string | Buffer): Buffer {
-    const data = typeof preimage === 'string' ? Buffer.from(preimage, 'hex') : preimage;
+    const data = toBuffer(preimage, 'preimage');
     return bitcoin.crypto.sha256(data);
 }
 
@@ -457,9 +506,7 @@ export function sha256(preimage: string | Buffer): Buffer {
  * Generates a random secret and its hash for HTLC
  */
 export function generateSecret(): { secret: Buffer; secretHash: Buffer } {
-    const secret = Buffer.from(
-        Array.from({ length: 32 }, () => Math.floor(Math.random() * 256))
-    );
+    const secret = randomBytes(32);
     const secretHash = sha256(secret);
     return { secret, secretHash };
 }
